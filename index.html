@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earth Satellite Debris Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        
+        #info {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.9);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 100;
+            max-width: 300px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        #info.hidden {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 50px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.9);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 100;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        #controls.hidden {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        
+        #filters {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            color: white;
+            background: rgba(0,0,0,0.95);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 100;
+            min-width: 250px;
+            font-size: 13px;
+            max-height: calc(100vh - 70px);
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        #filters.hidden {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        
+        .toggle-btn {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 101;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: #ffd700;
+        }
+        
+        #toggle-info {
+            top: 10px;
+            left: 10px;
+        }
+        
+        #toggle-controls {
+            bottom: 10px;
+            left: 10px;
+        }
+        
+        #toggle-filters {
+            top: 10px;
+            right: 10px;
+        }
+        
+        .toggle-btn.hidden-panel {
+            background: rgba(255,215,0,0.2);
+            border-color: #ffd700;
+        }
+        
+        .filter-section {
+            margin-bottom: 15px;
+        }
+        
+        .filter-section h4 {
+            margin: 0 0 8px 0;
+            color: #ffd700;
+            font-size: 14px;
+        }
+        
+        .filter-item {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .filter-item input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.1);
+        }
+        
+        .filter-item label {
+            cursor: pointer;
+            user-select: none;
+            flex-grow: 1;
+        }
+        
+        .color-indicator {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+            border: 2px solid rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .color-indicator:hover {
+            border-color: #ffd700;
+            transform: scale(1.1);
+        }
+        
+        .color-picker {
+            margin-left: 8px;
+            width: 20px;
+            height: 20px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            background: transparent;
+            padding: 0;
+        }
+        
+        .color-picker::-webkit-color-swatch-wrapper {
+            padding: 0;
+            border-radius: 50%;
+        }
+        
+        .color-picker::-webkit-color-swatch {
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 50%;
+        }
+        
+        .size-control {
+            margin: 10px 0;
+        }
+        
+        .size-control label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .size-slider {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #4a5568;
+            outline: none;
+        }
+        
+        .size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffd700;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+        
+        .size-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffd700;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+        
+        .size-value {
+            color: white;
+            font-weight: bold;
+            min-width: 35px;
+            text-align: center;
+        }
+        
+        #reset-filters {
+            background: #4a5568;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        #reset-filters:hover {
+            background: #2d3748;
+        }
+        
+        .color-presets {
+            margin-top: 5px;
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        
+        .preset-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: transform 0.1s ease;
+        }
+        
+        .preset-color:hover {
+            transform: scale(1.2);
+            border-color: #ffd700;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            z-index: 200;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading Earth and star data...</div>
+    
+    <!-- Toggle buttons for showing/hiding panels -->
+    <button id="toggle-info" class="toggle-btn">📊 Info</button>
+    <button id="toggle-controls" class="toggle-btn">🎮 Controls</button>
+    <button id="toggle-filters" class="toggle-btn">⚙️ Settings</button>
+    
+    <div id="info" class="hidden">
+        <h3>🌍 Earth Satellite Debris Visualization</h3>
+        <div id="stats">
+            <div>Earth: <span id="earth-model">Procedural Model</span></div>
+            <div>Debris objects: <span id="debris-count">2000</span></div>
+            <div>Star catalog: <span id="star-count">Loading...</span></div>
+            <div>LEO altitude: 200-2000 km</div>
+        </div>
+    </div>
+    
+    <div id="filters" class="hidden">
+        <h3 style="margin-top: 0; color: #00ff88;">🛰️ Satellite Controls</h3>
+        
+        <div class="filter-section">
+            <div class="size-control">
+                <label>Satellite Size</label>
+                <div class="slider-container">
+                    <input type="range" id="size-slider" class="size-slider" min="1" max="100" value="6" step="0.5">
+                    <span id="size-value" class="size-value">6</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="filter-section">
+            <h4>Background</h4>
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="toggle-starmap" checked>
+                    <label for="toggle-starmap">
+                        <span class="color-indicator" style="background: linear-gradient(45deg, #000428, #004e92, #ff6b6b); border: 1px solid #ffd700;"></span>
+                        NASA Star Map Background
+                    </label>
+                </div>
+            </div>
+            <div style="margin-left: 24px; font-size: 11px; color: #aaa; margin-top: 2px;">
+                Uncheck for clean white background
+            </div>
+        </div>
+        
+        <div class="filter-section">
+            <h4>Orbital Regimes</h4>
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="filter-leo" checked>
+                    <label for="filter-leo">
+                        <span class="color-indicator" id="color-leo" style="background-color: #ff4444;" onclick="toggleColorPicker('leo')"></span>
+                        LEO (Low Earth Orbit)
+                    </label>
+                </div>
+                <input type="color" id="color-picker-leo" class="color-picker" value="#ff4444" style="display: none;">
+            </div>
+            <div class="color-presets" id="presets-leo" style="display: none;">
+                <div class="preset-color" style="background-color: #ff4444;" onclick="setPresetColor('leo', '#ff4444')"></div>
+                <div class="preset-color" style="background-color: #ff6666;" onclick="setPresetColor('leo', '#ff6666')"></div>
+                <div class="preset-color" style="background-color: #ff0000;" onclick="setPresetColor('leo', '#ff0000')"></div>
+                <div class="preset-color" style="background-color: #cc0000;" onclick="setPresetColor('leo', '#cc0000')"></div>
+                <div class="preset-color" style="background-color: #ff8888;" onclick="setPresetColor('leo', '#ff8888')"></div>
+            </div>
+            
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="filter-meo" checked>
+                    <label for="filter-meo">
+                        <span class="color-indicator" id="color-meo" style="background-color: #ffff44;" onclick="toggleColorPicker('meo')"></span>
+                        MEO (Medium Earth Orbit)
+                    </label>
+                </div>
+                <input type="color" id="color-picker-meo" class="color-picker" value="#ffff44" style="display: none;">
+            </div>
+            <div class="color-presets" id="presets-meo" style="display: none;">
+                <div class="preset-color" style="background-color: #ffff44;" onclick="setPresetColor('meo', '#ffff44')"></div>
+                <div class="preset-color" style="background-color: #ffff00;" onclick="setPresetColor('meo', '#ffff00')"></div>
+                <div class="preset-color" style="background-color: #ffcc00;" onclick="setPresetColor('meo', '#ffcc00')"></div>
+                <div class="preset-color" style="background-color: #ff9900;" onclick="setPresetColor('meo', '#ff9900')"></div>
+                <div class="preset-color" style="background-color: #ffdd66;" onclick="setPresetColor('meo', '#ffdd66')"></div>
+            </div>
+            
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="filter-geo" checked>
+                    <label for="filter-geo">
+                        <span class="color-indicator" id="color-geo" style="background-color: #44ff44;" onclick="toggleColorPicker('geo')"></span>
+                        GEO (Geostationary)
+                    </label>
+                </div>
+                <input type="color" id="color-picker-geo" class="color-picker" value="#44ff44" style="display: none;">
+            </div>
+            <div class="color-presets" id="presets-geo" style="display: none;">
+                <div class="preset-color" style="background-color: #44ff44;" onclick="setPresetColor('geo', '#44ff44')"></div>
+                <div class="preset-color" style="background-color: #00ff00;" onclick="setPresetColor('geo', '#00ff00')"></div>
+                <div class="preset-color" style="background-color: #00cc00;" onclick="setPresetColor('geo', '#00cc00')"></div>
+                <div class="preset-color" style="background-color: #66ff66;" onclick="setPresetColor('geo', '#66ff66')"></div>
+                <div class="preset-color" style="background-color: #88ff88;" onclick="setPresetColor('geo', '#88ff88')"></div>
+            </div>
+            
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="filter-heo" checked>
+                    <label for="filter-heo">
+                        <span class="color-indicator" id="color-heo" style="background-color: #ff8844;" onclick="toggleColorPicker('heo')"></span>
+                        HEO (Highly Elliptical)
+                    </label>
+                </div>
+                <input type="color" id="color-picker-heo" class="color-picker" value="#ff8844" style="display: none;">
+            </div>
+            <div class="color-presets" id="presets-heo" style="display: none;">
+                <div class="preset-color" style="background-color: #ff8844;" onclick="setPresetColor('heo', '#ff8844')"></div>
+                <div class="preset-color" style="background-color: #ff6600;" onclick="setPresetColor('heo', '#ff6600')"></div>
+                <div class="preset-color" style="background-color: #ff9933;" onclick="setPresetColor('heo', '#ff9933')"></div>
+                <div class="preset-color" style="background-color: #ffaa55;" onclick="setPresetColor('heo', '#ffaa55')"></div>
+                <div class="preset-color" style="background-color: #cc5500;" onclick="setPresetColor('heo', '#cc5500')"></div>
+            </div>
+        </div>
+        
+        <div class="filter-section">
+            <h4>Satellite Types</h4>
+            
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="filter-simulated" checked>
+                    <label for="filter-simulated">
+                        <span class="color-indicator" id="color-simulated" style="background-color: #8888ff;" onclick="toggleColorPicker('simulated')"></span>
+                        Simulated Satellites
+                    </label>
+                </div>
+                <input type="color" id="color-picker-simulated" class="color-picker" value="#8888ff" style="display: none;">
+            </div>
+            <div class="color-presets" id="presets-simulated" style="display: none;">
+                <div class="preset-color" style="background-color: #8888ff;" onclick="setPresetColor('simulated', '#8888ff')"></div>
+                <div class="preset-color" style="background-color: #6666ff;" onclick="setPresetColor('simulated', '#6666ff')"></div>
+                <div class="preset-color" style="background-color: #aaaaff;" onclick="setPresetColor('simulated', '#aaaaff')"></div>
+                <div class="preset-color" style="background-color: #4444ff;" onclick="setPresetColor('simulated', '#4444ff')"></div>
+                <div class="preset-color" style="background-color: #9999ff;" onclick="setPresetColor('simulated', '#9999ff')"></div>
+            </div>
+            
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="filter-starlink" checked>
+                    <label for="filter-starlink">
+                        <span class="color-indicator" id="color-starlink" style="background-color: #00ffff;" onclick="toggleColorPicker('starlink')"></span>
+                        Starlink
+                    </label>
+                </div>
+                <input type="color" id="color-picker-starlink" class="color-picker" value="#00ffff" style="display: none;">
+            </div>
+            <div class="color-presets" id="presets-starlink" style="display: none;">
+                <div class="preset-color" style="background-color: #00ffff;" onclick="setPresetColor('starlink', '#00ffff')"></div>
+                <div class="preset-color" style="background-color: #0088ff;" onclick="setPresetColor('starlink', '#0088ff')"></div>
+                <div class="preset-color" style="background-color: #00aaff;" onclick="setPresetColor('starlink', '#00aaff')"></div>
+                <div class="preset-color" style="background-color: #66ccff;" onclick="setPresetColor('starlink', '#66ccff')"></div>
+                <div class="preset-color" style="background-color: #00cccc;" onclick="setPresetColor('starlink', '#00cccc')"></div>
+            </div>
+            
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="filter-iss" checked>
+                    <label for="filter-iss">
+                        <span class="color-indicator" id="color-iss" style="background-color: #ff00ff;" onclick="toggleColorPicker('iss')"></span>
+                        ISS/Stations
+                    </label>
+                </div>
+                <input type="color" id="color-picker-iss" class="color-picker" value="#ff00ff" style="display: none;">
+            </div>
+            <div class="color-presets" id="presets-iss" style="display: none;">
+                <div class="preset-color" style="background-color: #ff00ff;" onclick="setPresetColor('iss', '#ff00ff')"></div>
+                <div class="preset-color" style="background-color: #cc00cc;" onclick="setPresetColor('iss', '#cc00cc')"></div>
+                <div class="preset-color" style="background-color: #ff44ff;" onclick="setPresetColor('iss', '#ff44ff')"></div>
+                <div class="preset-color" style="background-color: #ff88ff;" onclick="setPresetColor('iss', '#ff88ff')"></div>
+                <div class="preset-color" style="background-color: #aa00aa;" onclick="setPresetColor('iss', '#aa00aa')"></div>
+            </div>
+            
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="filter-debris" checked>
+                    <label for="filter-debris">
+                        <span class="color-indicator" id="color-debris" style="background-color: #666666;" onclick="toggleColorPicker('debris')"></span>
+                        Debris
+                    </label>
+                </div>
+                <input type="color" id="color-picker-debris" class="color-picker" value="#666666" style="display: none;">
+            </div>
+            <div class="color-presets" id="presets-debris" style="display: none;">
+                <div class="preset-color" style="background-color: #666666;" onclick="setPresetColor('debris', '#666666')"></div>
+                <div class="preset-color" style="background-color: #888888;" onclick="setPresetColor('debris', '#888888')"></div>
+                <div class="preset-color" style="background-color: #444444;" onclick="setPresetColor('debris', '#444444')"></div>
+                <div class="preset-color" style="background-color: #aaaaaa;" onclick="setPresetColor('debris', '#aaaaaa')"></div>
+                <div class="preset-color" style="background-color: #333333;" onclick="setPresetColor('debris', '#333333')"></div>
+            </div>
+            
+            <div class="filter-item">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <input type="checkbox" id="filter-weather" checked>
+                    <label for="filter-weather">
+                        <span class="color-indicator" id="color-weather" style="background-color: #88ff88;" onclick="toggleColorPicker('weather')"></span>
+                        Weather/Science
+                    </label>
+                </div>
+                <input type="color" id="color-picker-weather" class="color-picker" value="#88ff88" style="display: none;">
+            </div>
+            <div class="color-presets" id="presets-weather" style="display: none;">
+                <div class="preset-color" style="background-color: #88ff88;" onclick="setPresetColor('weather', '#88ff88')"></div>
+                <div class="preset-color" style="background-color: #44cc44;" onclick="setPresetColor('weather', '#44cc44')"></div>
+                <div class="preset-color" style="background-color: #66dd66;" onclick="setPresetColor('weather', '#66dd66')"></div>
+                <div class="preset-color" style="background-color: #aaffaa;" onclick="setPresetColor('weather', '#aaffaa')"></div>
+                <div class="preset-color" style="background-color: #99ee99;" onclick="setPresetColor('weather', '#99ee99')"></div>
+            </div>
+        </div>
+        
+        <button id="reset-filters">Reset All Settings</button>
+    </div>
+    
+    <div id="controls" class="hidden">
+        <strong>Controls:</strong><br>
+        🖱️ Left drag: Rotate<br>
+        🖱️ Right drag: Pan<br>
+        🎯 Scroll: Zoom<br>
+        🔄 Double-click: Reset view
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global variables
+        window.satelliteColors = {
+            LEO: 0xff4444,
+            MEO: 0xffff44,
+            GEO: 0x44ff44,
+            HEO: 0xff8844,
+            starlink: 0x00ffff,
+            iss: 0xff00ff,
+            debris: 0x666666,
+            weather: 0x88ff88,
+            simulated: 0x8888ff
+        };
+        
+        window.satelliteSize = 6;
+        
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 100, 200000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000);
+        renderer.sortObjects = true;
+        document.body.appendChild(renderer.domElement);
+
+        // Earth parameters
+        const EARTH_RADIUS = 6371;
+        const LEO_MIN_ALT = 200;
+        const LEO_MAX_ALT = 2000;
+        const NUM_DEBRIS = 2000;
+
+        // Groups for organization
+        const earthGroup = new THREE.Group();
+        const debrisGroup = new THREE.Group();
+        const starsGroup = new THREE.Group();
+        const whiteBackgroundGroup = new THREE.Group();
+        scene.add(earthGroup);
+        scene.add(debrisGroup);
+        scene.add(starsGroup);
+        scene.add(whiteBackgroundGroup);
+
+        // Camera controls
+        let mouseDown = false;
+        let mouseX = 0, mouseY = 0;
+        let cameraDistance = 20000;
+        camera.position.set(15000, 8000, 15000);
+        camera.lookAt(0, 0, 0);
+
+        // Mouse controls
+        renderer.domElement.addEventListener('mousedown', onMouseDown);
+        renderer.domElement.addEventListener('mousemove', onMouseMove);
+        renderer.domElement.addEventListener('mouseup', onMouseUp);
+        renderer.domElement.addEventListener('wheel', onWheel);
+        renderer.domElement.addEventListener('dblclick', resetView);
+
+        function onMouseDown(event) {
+            mouseDown = true;
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        }
+
+        function onMouseMove(event) {
+            if (!mouseDown) return;
+            
+            const deltaX = event.clientX - mouseX;
+            const deltaY = event.clientY - mouseY;
+            
+            const spherical = new THREE.Spherical();
+            spherical.setFromVector3(camera.position);
+            spherical.theta -= deltaX * 0.01;
+            spherical.phi += deltaY * 0.01;
+            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+            
+            camera.position.setFromSpherical(spherical);
+            camera.lookAt(0, 0, 0);
+            
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        }
+
+        function onMouseUp() {
+            mouseDown = false;
+        }
+
+        function onWheel(event) {
+            cameraDistance += event.deltaY * 10;
+            cameraDistance = Math.max(8000, Math.min(50000, cameraDistance));
+            
+            const direction = camera.position.clone().normalize();
+            camera.position.copy(direction.multiplyScalar(cameraDistance));
+        }
+
+        function resetView() {
+            cameraDistance = 20000;
+            camera.position.set(15000, 8000, 15000);
+            camera.lookAt(0, 0, 0);
+        }
+
+        // Toggle star map background
+        function toggleStarMapBackground(showStarMap) {
+            if (showStarMap) {
+                starsGroup.visible = true;
+                whiteBackgroundGroup.visible = false;
+                renderer.setClearColor(0x000000);
+                
+                if (window.allSatellites) {
+                    window.allSatellites.forEach(satellite => {
+                        if (satellite.mesh && satellite.mesh.material) {
+                            satellite.mesh.material.opacity = 0.9;
+                        }
+                    });
+                }
+                
+                if (window.debrisOrbits) {
+                    window.debrisOrbits.forEach(orbit => {
+                        if (orbit.mesh && orbit.mesh.material) {
+                            orbit.mesh.material.opacity = 0.8;
+                        }
+                    });
+                }
+            } else {
+                starsGroup.visible = false;
+                whiteBackgroundGroup.visible = true;
+                renderer.setClearColor(0xffffff);
+                
+                if (whiteBackgroundGroup.children.length === 0) {
+                    createWhiteBackground();
+                }
+                
+                if (window.allSatellites) {
+                    window.allSatellites.forEach(satellite => {
+                        if (satellite.mesh && satellite.mesh.material) {
+                            satellite.mesh.material.opacity = 1.0;
+                        }
+                    });
+                }
+                
+                if (window.debrisOrbits) {
+                    window.debrisOrbits.forEach(orbit => {
+                        if (orbit.mesh && orbit.mesh.material) {
+                            orbit.mesh.material.opacity = 1.0;
+                        }
+                    });
+                }
+                
+                // Update visibility after background change
+                updateVisibility();
+            }
+        }
+        
+        // Create white background sphere
+        function createWhiteBackground() {
+            const whiteBackgroundRadius = 45000;
+            const geometry = new THREE.SphereGeometry(whiteBackgroundRadius, 32, 16);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                side: THREE.BackSide
+            });
+            
+            const whiteSphere = new THREE.Mesh(geometry, material);
+            whiteSphere.userData = { isWhiteBackground: true };
+            whiteBackgroundGroup.add(whiteSphere);
+            whiteBackgroundGroup.visible = false;
+        }
+        
+        // Setup filter control event listeners
+        function setupFilterControls() {
+            const sizeSlider = document.getElementById('size-slider');
+            const sizeValue = document.getElementById('size-value');
+            
+            sizeSlider.addEventListener('input', function() {
+                const newSize = parseFloat(this.value);
+                window.satelliteSize = newSize;
+                sizeValue.textContent = newSize;
+                updateSatelliteSize();
+            });
+            
+            const starmapToggle = document.getElementById('toggle-starmap');
+            starmapToggle.addEventListener('change', function() {
+                toggleStarMapBackground(this.checked);
+            });
+            
+            setupColorPickers();
+            
+            // Add event listeners for all filter checkboxes
+            document.getElementById('filter-leo').addEventListener('change', updateVisibility);
+            document.getElementById('filter-meo').addEventListener('change', updateVisibility);
+            document.getElementById('filter-geo').addEventListener('change', updateVisibility);
+            document.getElementById('filter-heo').addEventListener('change', updateVisibility);
+            document.getElementById('filter-simulated').addEventListener('change', updateVisibility);
+            document.getElementById('filter-starlink').addEventListener('change', updateVisibility);
+            document.getElementById('filter-iss').addEventListener('change', updateVisibility);
+            document.getElementById('filter-debris').addEventListener('change', updateVisibility);
+            document.getElementById('filter-weather').addEventListener('change', updateVisibility);
+            document.getElementById('reset-filters').addEventListener('click', resetAllFilters);
+        }
+        
+        // Setup color picker functionality
+        function setupColorPickers() {
+            const colorTypes = ['leo', 'meo', 'geo', 'heo', 'simulated', 'starlink', 'iss', 'debris', 'weather'];
+            
+            colorTypes.forEach(type => {
+                const picker = document.getElementById(`color-picker-${type}`);
+                if (picker) {
+                    picker.addEventListener('change', function() {
+                        updateSatelliteColor(type, this.value);
+                    });
+                }
+            });
+        }
+        
+        // Toggle color picker visibility
+        function toggleColorPicker(type) {
+            const picker = document.getElementById(`color-picker-${type}`);
+            const presets = document.getElementById(`presets-${type}`);
+            
+            if (picker.style.display === 'none') {
+                const allPickers = document.querySelectorAll('.color-picker');
+                const allPresets = document.querySelectorAll('.color-presets');
+                allPickers.forEach(p => p.style.display = 'none');
+                allPresets.forEach(p => p.style.display = 'none');
+                
+                picker.style.display = 'block';
+                presets.style.display = 'flex';
+                picker.click();
+            } else {
+                picker.style.display = 'none';
+                presets.style.display = 'none';
+            }
+        }
+        
+        // Set preset color
+        function setPresetColor(type, color) {
+            updateSatelliteColor(type, color);
+            document.getElementById(`color-picker-${type}`).value = color;
+            document.getElementById(`color-picker-${type}`).style.display = 'none';
+            document.getElementById(`presets-${type}`).style.display = 'none';
+        }
+        
+        // Update satellite colors
+        function updateSatelliteColor(type, hexColor) {
+            const color = new THREE.Color(hexColor);
+            const colorIndicator = document.getElementById(`color-${type}`);
+            
+            colorIndicator.style.backgroundColor = hexColor;
+            
+            let colorKey = type;
+            if (type === 'leo') colorKey = 'LEO';
+            if (type === 'meo') colorKey = 'MEO';
+            if (type === 'geo') colorKey = 'GEO';
+            if (type === 'heo') colorKey = 'HEO';
+            
+            window.satelliteColors[colorKey] = color.getHex();
+            
+            if (window.allSatellites) {
+                window.allSatellites.forEach(satellite => {
+                    let shouldUpdate = false;
+                    
+                    if (satellite.type === type || 
+                        (satellite.regime === colorKey && satellite.type === 'simulated') ||
+                        (satellite.regime === colorKey && satellite.type === 'other')) {
+                        shouldUpdate = true;
+                    }
+                    
+                    if (shouldUpdate && satellite.mesh) {
+                        satellite.mesh.material.color.setHex(color.getHex());
+                        satellite.originalColor = color.getHex();
+                    }
+                });
+            }
+            
+            if (window.debrisOrbits) {
+                window.debrisOrbits.forEach(orbit => {
+                    if (orbit.type === type || orbit.regime === colorKey) {
+                        orbit.mesh.material.color.setHex(color.getHex());
+                    }
+                });
+            }
+        }
+        
+        // Update satellite size
+        function updateSatelliteSize() {
+            const newSize = window.satelliteSize;
+            
+            if (window.allSatellites) {
+                window.allSatellites.forEach(satellite => {
+                    if (satellite.mesh) {
+                        satellite.mesh.geometry.dispose();
+                        satellite.mesh.geometry = new THREE.SphereGeometry(newSize, 8, 6);
+                    }
+                });
+            }
+            
+            if (window.debrisOrbits) {
+                window.debrisOrbits.forEach(orbit => {
+                    orbit.mesh.geometry.dispose();
+                    orbit.mesh.geometry = new THREE.SphereGeometry(newSize, 8, 6);
+                });
+            }
+        }
+
+        // Create Earth with texture attempt
+        async function createEarth() {
+            // First create a basic Earth that will always show
+            const geometry = new THREE.SphereGeometry(EARTH_RADIUS, 64, 32);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x2B4C8C,
+                emissive: 0x112244,
+                shininess: 10,
+                side: THREE.FrontSide
+            });
+            
+            const earth = new THREE.Mesh(geometry, material);
+            earthGroup.add(earth);
+            
+            // Add cloud layer
+            const cloudGeometry = new THREE.SphereGeometry(EARTH_RADIUS * 1.015, 64, 32);
+            const cloudMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.3,
+                depthWrite: false,
+                side: THREE.FrontSide
+            });
+            const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
+            earthGroup.add(clouds);
+            
+            // Now try to load a texture if available
+            const loader = new THREE.TextureLoader();
+            const textureUrls = [
+                './earth_texture.jpg',
+                './earth.jpg',
+                './world.topo.bathy.200412.3x2048x1024.jpg',
+                'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Marble_2002.png/1024px-Blue_Marble_2002.png'
+            ];
+            
+            for (const url of textureUrls) {
+                try {
+                    const texture = await new Promise((resolve, reject) => {
+                        loader.load(url, resolve, undefined, reject);
+                    });
+                    
+                    // If texture loads successfully, update the material
+                    earth.material.map = texture;
+                    earth.material.color.setHex(0xffffff); // Reset color to white when texture is applied
+                    earth.material.needsUpdate = true;
+                    document.getElementById('earth-model').textContent = 'Textured Earth';
+                    console.log('Earth texture loaded from:', url);
+                    break;
+                } catch (e) {
+                    console.log('Failed to load texture from:', url);
+                }
+            }
+            
+            setupLighting();
+        }
+
+        function setupLighting() {
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+            
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            sunLight.position.set(2, 1, 1);
+            scene.add(sunLight);
+            
+            const fillLight = new THREE.DirectionalLight(0x8888ff, 0.3);
+            fillLight.position.set(-1, 0, 0);
+            scene.add(fillLight);
+        }
+
+        // Create debris with TLE attempt
+        async function createDebris() {
+            // Try to load TLE data first
+            const tleUrls = [
+                './3le.txt',
+                './tle_data.txt',
+                './satellites.txt',
+                'https://celestrak.com/NORAD/elements/active.txt'
+            ];
+            
+            let tleLoaded = false;
+            
+            for (const url of tleUrls) {
+                try {
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const tleData = await response.text();
+                        await createSatellitesFromTLE(tleData);
+                        tleLoaded = true;
+                        console.log('TLE data loaded from:', url);
+                        break;
+                    }
+                } catch (e) {
+                    console.log('Failed to load TLE from:', url);
+                }
+            }
+            
+            // If no TLE data found, create simulated debris
+            if (!tleLoaded) {
+                createSimulatedDebris();
+            }
+        }
+        
+        // Parse TLE data
+        async function createSatellitesFromTLE(tleData) {
+            const lines = tleData.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            const satellites = [];
+            
+            console.log(`Processing ${lines.length} lines of TLE data`);
+            
+            // Simple TLE parsing
+            for (let i = 0; i < lines.length - 2; i++) {
+                if (lines[i + 1].startsWith('1 ') && lines[i + 2].startsWith('2 ')) {
+                    try {
+                        const name = lines[i];
+                        const line1 = lines[i + 1];
+                        const line2 = lines[i + 2];
+                        
+                        console.log(`Parsing satellite: ${name}`);
+                        
+                        // Basic orbital parameters from TLE
+                        const meanMotion = parseFloat(line2.substring(52, 63));
+                        const eccentricity = parseFloat('0.' + line2.substring(26, 33));
+                        const inclination = parseFloat(line2.substring(8, 16));
+                        
+                        // Calculate altitude (simplified)
+                        const n = meanMotion * 2 * Math.PI / 86400;
+                        const a = Math.pow(398600.4418 / (n * n), 1/3);
+                        const perigeeAlt = a * (1 - eccentricity) - EARTH_RADIUS;
+                        
+                        if (perigeeAlt > 100 && perigeeAlt < 50000) {
+                            satellites.push({
+                                name: name,
+                                altitude: perigeeAlt,
+                                inclination: inclination * Math.PI / 180,
+                                eccentricity: eccentricity,
+                                meanMotion: meanMotion
+                            });
+                            
+                            // Log Starlink satellites specifically
+                            if (name.toUpperCase().includes('STARLINK')) {
+                                console.log(`✓ Found Starlink satellite: ${name}, altitude: ${perigeeAlt.toFixed(2)} km`);
+                            }
+                        }
+                        
+                        if (satellites.length >= 5000) break;
+                        i += 2;
+                    } catch (e) {
+                        console.log(`Error parsing satellite at line ${i}:`, e);
+                        // Skip invalid entries
+                    }
+                }
+            }
+            
+            if (satellites.length > 0) {
+                console.log(`Successfully parsed ${satellites.length} satellites from TLE data`);
+                createSatelliteObjects(satellites);
+                window.allSatellites = satellites;
+                document.getElementById('debris-count').textContent = `${satellites.length} real satellites from TLE`;
+                setupFilterControls();
+            } else {
+                console.log('No valid satellites found in TLE data, falling back to simulated');
+                createSimulatedDebris();
+            }
+        }
+        
+        // Create satellite objects
+        function createSatelliteObjects(satellites) {
+            console.log(`Creating objects for ${satellites.length} satellites`);
+            let starlinkCount = 0;
+            
+            satellites.forEach((sat, index) => {
+                // Determine regime based on altitude
+                let regime;
+                if (sat.altitude < 2000) {
+                    regime = 'LEO';
+                } else if (sat.altitude < 35000) {
+                    regime = 'MEO';
+                } else if (sat.altitude >= 35000 && sat.altitude <= 36500) {
+                    regime = 'GEO';
+                } else {
+                    regime = 'HEO';
+                }
+                
+                // Determine type based on name
+                let type = 'other';
+                const upperName = sat.name.toUpperCase();
+                
+                if (upperName.includes('STARLINK')) {
+                    type = 'starlink';
+                    starlinkCount++;
+                    console.log(`Satellite ${index}: "${sat.name}" → type: ${type}, regime: ${regime}, altitude: ${sat.altitude.toFixed(2)} km`);
+                } else if (upperName.includes('ISS') || upperName.includes('STATION')) {
+                    type = 'iss';
+                } else if (upperName.includes('DEBRIS') || upperName.includes('DEB')) {
+                    type = 'debris';
+                } else if (upperName.includes('WEATHER') || upperName.includes('GOES') || upperName.includes('METEO')) {
+                    type = 'weather';
+                }
+                
+                // Set color based on type or regime
+                let color;
+                if (type === 'starlink') {
+                    color = window.satelliteColors.starlink;
+                } else if (type === 'iss') {
+                    color = window.satelliteColors.iss;
+                } else if (type === 'debris') {
+                    color = window.satelliteColors.debris;
+                } else if (type === 'weather') {
+                    color = window.satelliteColors.weather;
+                } else {
+                    color = window.satelliteColors[regime] || 0x8888ff;
+                }
+                
+                const geometry = new THREE.SphereGeometry(window.satelliteSize, 8, 6);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: color, 
+                    transparent: true, 
+                    opacity: 0.9 
+                });
+                
+                const mesh = new THREE.Mesh(geometry, material);
+                
+                // Simple orbital positioning
+                const radius = EARTH_RADIUS + sat.altitude;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.PI / 2 + sat.inclination * (Math.random() - 0.5);
+                
+                mesh.position.x = radius * Math.cos(theta) * Math.sin(phi);
+                mesh.position.y = radius * Math.sin(theta) * Math.sin(phi);
+                mesh.position.z = radius * Math.cos(phi);
+                
+                sat.mesh = mesh;
+                sat.radius = radius;
+                sat.theta = theta;
+                sat.phi = phi;
+                sat.visible = true;
+                sat.regime = regime;
+                sat.type = type;
+                sat.originalColor = color;
+                
+                debrisGroup.add(mesh);
+            });
+            
+            console.log(`✅ Created ${starlinkCount} Starlink satellites out of ${satellites.length} total`);
+            
+            // Log statistics for debugging
+            const regimeStats = {
+                LEO: satellites.filter(s => s.regime === 'LEO').length,
+                MEO: satellites.filter(s => s.regime === 'MEO').length,
+                GEO: satellites.filter(s => s.regime === 'GEO').length,
+                HEO: satellites.filter(s => s.regime === 'HEO').length
+            };
+            const typeStats = {
+                starlink: satellites.filter(s => s.type === 'starlink').length,
+                iss: satellites.filter(s => s.type === 'iss').length,
+                debris: satellites.filter(s => s.type === 'debris').length,
+                weather: satellites.filter(s => s.type === 'weather').length,
+                other: satellites.filter(s => s.type === 'other').length
+            };
+            console.log('Satellite regime distribution:', regimeStats);
+            console.log('Satellite type distribution:', typeStats);
+            console.log('Total satellites loaded from TLE:', satellites.length);
+        }
+
+        // Create simulated debris fallback
+        function createSimulatedDebris() {
+            window.debrisOrbits = [];
+            
+            for (let i = 0; i < NUM_DEBRIS; i++) {
+                let color, type, regime;
+                const random = Math.random();
+                
+                if (random < 0.4) {
+                    color = window.satelliteColors.simulated;
+                    type = 'simulated';
+                    regime = 'LEO';
+                } else if (random < 0.6) {
+                    color = window.satelliteColors.starlink;
+                    type = 'starlink';
+                    regime = 'LEO';
+                } else if (random < 0.8) {
+                    color = window.satelliteColors.simulated;
+                    type = 'simulated';
+                    regime = 'MEO';
+                } else {
+                    color = window.satelliteColors.debris;
+                    type = 'debris';
+                    regime = 'LEO';
+                }
+                
+                const geometry = new THREE.SphereGeometry(window.satelliteSize, 8, 6);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: color, 
+                    transparent: true, 
+                    opacity: 0.8 
+                });
+                
+                const debris = new THREE.Mesh(geometry, material);
+                
+                const altitude = LEO_MIN_ALT + Math.random() * (LEO_MAX_ALT - LEO_MIN_ALT);
+                const radius = EARTH_RADIUS + altitude;
+                const inclination = (Math.random() - 0.5) * Math.PI * 0.3;
+                const initialPhase = Math.random() * Math.PI * 2;
+                const orbitalSpeed = Math.sqrt(398600 / radius) / radius;
+                
+                const orbitData = {
+                    mesh: debris,
+                    radius: radius,
+                    inclination: inclination,
+                    phase: initialPhase,
+                    speed: orbitalSpeed * 0.1,
+                    type: type,
+                    regime: regime,
+                    visible: true,
+                    originalColor: color
+                };
+                
+                debris.userData = orbitData;
+                debris.type = type;
+                debris.regime = regime;
+                window.debrisOrbits.push(orbitData);
+                
+                debrisGroup.add(debris);
+            }
+            
+            window.allSatellites = window.debrisOrbits;
+            updateSimulatedStats();
+            setupFilterControls();
+        }
+
+        function updateSimulatedStats() {
+            const total = window.debrisOrbits.length;
+            const leo = window.debrisOrbits.filter(s => s.regime === 'LEO').length;
+            const meo = window.debrisOrbits.filter(s => s.regime === 'MEO').length;
+            const starlink = window.debrisOrbits.filter(s => s.type === 'starlink').length;
+            const debris = window.debrisOrbits.filter(s => s.type === 'debris').length;
+            const simulated = window.debrisOrbits.filter(s => s.type === 'simulated').length;
+            
+            console.log('Simulated satellite breakdown:');
+            console.log('- Total:', total);
+            console.log('- LEO:', leo, 'MEO:', meo);
+            console.log('- Starlink:', starlink, 'Debris:', debris, 'Simulated:', simulated);
+            
+            document.getElementById('debris-count').innerHTML = 
+                `${total} simulated: LEO(${leo}) MEO(${meo})<br>` +
+                `Starlink-like(${starlink}) Debris(${debris}) Simulated(${simulated})`;
+        }
+
+        function updateVisibility() {
+            if (!window.allSatellites) return;
+
+            const filters = {
+                regime: {
+                    LEO: document.getElementById('filter-leo').checked,
+                    MEO: document.getElementById('filter-meo').checked,
+                    GEO: document.getElementById('filter-geo').checked,
+                    HEO: document.getElementById('filter-heo').checked
+                },
+                type: {
+                    simulated: document.getElementById('filter-simulated').checked,
+                    starlink: document.getElementById('filter-starlink').checked,
+                    iss: document.getElementById('filter-iss').checked,
+                    debris: document.getElementById('filter-debris').checked,
+                    weather: document.getElementById('filter-weather').checked
+                }
+            };
+
+            console.log('Current filter states:', filters);
+
+            let visibleCount = 0;
+            let starlinkCount = 0;
+            let hiddenStarlinkCount = 0;
+
+            window.allSatellites.forEach(satellite => {
+                if (satellite.type === 'starlink') {
+                    starlinkCount++;
+                }
+
+                let shouldShow = false;
+
+                const regimeEnabled = filters.regime[satellite.regime];
+                const typeEnabled = filters.type[satellite.type];
+
+                // Apply the filter logic based on satellite type
+                if (satellite.type === 'simulated') {
+                    // Simulated satellites need both regime and simulated type to be enabled
+                    shouldShow = regimeEnabled && typeEnabled;
+                } else if (satellite.type === 'other') {
+                    // Generic satellites only need regime to be enabled
+                    shouldShow = regimeEnabled;
+                } else {
+                    // All other specific types need both regime and type to be enabled
+                    shouldShow = regimeEnabled && typeEnabled;
+                }
+
+                if (satellite.type === 'starlink' && !shouldShow) {
+                    hiddenStarlinkCount++;
+                    console.log('Starlink satellite hidden - regime enabled:', regimeEnabled, 'type enabled:', typeEnabled);
+                }
+
+                satellite.mesh.visible = shouldShow;
+                satellite.visible = shouldShow;
+
+                if (shouldShow) visibleCount++;
+            });
+
+            console.log(`Total Starlink satellites: ${starlinkCount}, Hidden: ${hiddenStarlinkCount}`);
+            console.log(`Visibility update: ${visibleCount} of ${window.allSatellites.length} satellites visible`);
+            updateFilteredStats();
+        }
+
+        function updateFilteredStats() {
+            if (!window.allSatellites) return;
+            
+            const visible = window.allSatellites.filter(s => s.visible);
+            const total = visible.length;
+            
+            if (total === 0) {
+                document.getElementById('debris-count').textContent = 'No satellites visible (check filters)';
+                return;
+            }
+            
+            const leo = visible.filter(s => s.regime === 'LEO').length;
+            const meo = visible.filter(s => s.regime === 'MEO').length;
+            const geo = visible.filter(s => s.regime === 'GEO').length;
+            const heo = visible.filter(s => s.regime === 'HEO').length;
+            
+            const simulated = visible.filter(s => s.type === 'simulated').length;
+            const starlink = visible.filter(s => s.type === 'starlink').length;
+            const iss = visible.filter(s => s.type === 'iss').length;
+            const debris = visible.filter(s => s.type === 'debris').length;
+            const weather = visible.filter(s => s.type === 'weather').length;
+            
+            document.getElementById('debris-count').innerHTML = 
+                `${total} visible: LEO(${leo}) MEO(${meo}) GEO(${geo}) HEO(${heo})<br>` +
+                `Simulated(${simulated}) Starlink(${starlink}) ISS(${iss}) Debris(${debris}) Weather(${weather})`;
+        }
+
+        // Reset all filters
+        function resetAllFilters() {
+            document.getElementById('filter-leo').checked = true;
+            document.getElementById('filter-meo').checked = true;
+            document.getElementById('filter-geo').checked = true;
+            document.getElementById('filter-heo').checked = true;
+            document.getElementById('filter-simulated').checked = true;
+            document.getElementById('filter-starlink').checked = true;
+            document.getElementById('filter-iss').checked = true;
+            document.getElementById('filter-debris').checked = true;
+            document.getElementById('filter-weather').checked = true;
+            document.getElementById('toggle-starmap').checked = true;
+            
+            toggleStarMapBackground(true);
+            
+            window.satelliteColors = {
+                LEO: 0xff4444,
+                MEO: 0xffff44,
+                GEO: 0x44ff44,
+                HEO: 0xff8844,
+                starlink: 0x00ffff,
+                iss: 0xff00ff,
+                debris: 0x666666,
+                weather: 0x88ff88,
+                simulated: 0x8888ff
+            };
+            
+            window.satelliteSize = 6;
+            document.getElementById('size-slider').value = 6;
+            document.getElementById('size-value').textContent = '6';
+            
+            // Reset color indicators
+            document.getElementById('color-leo').style.backgroundColor = '#ff4444';
+            document.getElementById('color-meo').style.backgroundColor = '#ffff44';
+            document.getElementById('color-geo').style.backgroundColor = '#44ff44';
+            document.getElementById('color-heo').style.backgroundColor = '#ff8844';
+            document.getElementById('color-simulated').style.backgroundColor = '#8888ff';
+            document.getElementById('color-starlink').style.backgroundColor = '#00ffff';
+            document.getElementById('color-iss').style.backgroundColor = '#ff00ff';
+            document.getElementById('color-debris').style.backgroundColor = '#666666';
+            document.getElementById('color-weather').style.backgroundColor = '#88ff88';
+            
+            // Reset color pickers
+            document.getElementById('color-picker-leo').value = '#ff4444';
+            document.getElementById('color-picker-meo').value = '#ffff44';
+            document.getElementById('color-picker-geo').value = '#44ff44';
+            document.getElementById('color-picker-heo').value = '#ff8844';
+            document.getElementById('color-picker-simulated').value = '#8888ff';
+            document.getElementById('color-picker-starlink').value = '#00ffff';
+            document.getElementById('color-picker-iss').value = '#ff00ff';
+            document.getElementById('color-picker-debris').value = '#666666';
+            document.getElementById('color-picker-weather').value = '#88ff88';
+            
+            // Hide all color pickers and presets
+            document.querySelectorAll('.color-picker').forEach(p => p.style.display = 'none');
+            document.querySelectorAll('.color-presets').forEach(p => p.style.display = 'none');
+            
+            updateSatelliteSize();
+            
+            // Reset satellite colors
+            if (window.allSatellites) {
+                window.allSatellites.forEach(satellite => {
+                    let color;
+                    if (satellite.type === 'simulated') {
+                        color = window.satelliteColors.simulated;
+                    } else if (satellite.type === 'starlink') {
+                        color = window.satelliteColors.starlink;
+                    } else if (satellite.type === 'iss') {
+                        color = window.satelliteColors.iss;
+                    } else if (satellite.type === 'debris') {
+                        color = window.satelliteColors.debris;
+                    } else if (satellite.type === 'weather') {
+                        color = window.satelliteColors.weather;
+                    } else {
+                        color = window.satelliteColors[satellite.regime] || 0x8888ff;
+                    }
+                    
+                    if (satellite.mesh) {
+                        satellite.mesh.material.color.setHex(color);
+                        satellite.originalColor = color;
+                    }
+                });
+            }
+            
+            updateVisibility();
+        }
+
+        // Create stars with star map attempt
+        async function createStars() {
+            // First create procedural stars that will always show
+            const numStars = 3000;
+            const starDistance = 45000;
+            
+            const geometries = [
+                new THREE.SphereGeometry(8, 6, 4),
+                new THREE.SphereGeometry(12, 8, 6),
+                new THREE.SphereGeometry(18, 8, 6),
+                new THREE.SphereGeometry(25, 10, 8)
+            ];
+            
+            for (let i = 0; i < numStars; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                const x = starDistance * Math.sin(phi) * Math.cos(theta);
+                const y = starDistance * Math.sin(phi) * Math.sin(theta);
+                const z = starDistance * Math.cos(phi);
+                
+                const starType = Math.random();
+                let color, brightness, geometry;
+                
+                if (starType < 0.003) {
+                    color = new THREE.Color(0.5, 0.6, 1.0);
+                    brightness = 1.0;
+                    geometry = geometries[3];
+                } else if (starType < 0.013) {
+                    color = new THREE.Color(0.6, 0.7, 1.0);
+                    brightness = 0.8 + Math.random() * 0.2;
+                    geometry = geometries[2];
+                } else if (starType < 0.06) {
+                    color = new THREE.Color(1.0, 1.0, 0.95);
+                    brightness = 0.7 + Math.random() * 0.2;
+                    geometry = geometries[1];
+                } else if (starType < 0.13) {
+                    color = new THREE.Color(1.0, 0.98, 0.8);
+                    brightness = 0.6 + Math.random() * 0.3;
+                    geometry = geometries[1];
+                } else if (starType < 0.20) {
+                    color = new THREE.Color(1.0, 1.0, 0.7);
+                    brightness = 0.5 + Math.random() * 0.4;
+                    geometry = geometries[Math.random() < 0.1 ? 2 : 1];
+                } else if (starType < 0.32) {
+                    color = new THREE.Color(1.0, 0.8, 0.5);
+                    brightness = 0.4 + Math.random() * 0.4;
+                    geometry = geometries[0];
+                } else {
+                    color = new THREE.Color(1.0, 0.5, 0.3);
+                    brightness = 0.2 + Math.random() * 0.5;
+                    geometry = geometries[0];
+                }
+                
+                if (Math.random() < 0.001) {
+                    brightness = 1.0;
+                    geometry = geometries[3];
+                }
+                
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: color.multiplyScalar(brightness),
+                    transparent: true,
+                    opacity: 0.6 + Math.random() * 0.4
+                });
+                
+                const star = new THREE.Mesh(geometry, material);
+                star.position.set(x, y, z);
+                
+                const sizeVariation = 0.7 + Math.random() * 0.6;
+                star.scale.setScalar(sizeVariation);
+                
+                star.userData = {
+                    originalOpacity: material.opacity,
+                    twinkleSpeed: 0.5 + Math.random() * 2.0,
+                    brightness: brightness
+                };
+                
+                starsGroup.add(star);
+            }
+            
+            document.getElementById('star-count').textContent = `${numStars} procedural stars`;
+            
+            // Now try to load a star map texture if available
+            const loader = new THREE.TextureLoader();
+            const starMapUrls = [
+                './starmap_2020_4k.jpg',
+                './starmap.jpg',
+                './stars.jpg',
+                'https://raw.githubusercontent.com/stemkoski/stemkoski.github.com/master/Three.js/images/starfield.png'
+            ];
+            
+            for (const url of starMapUrls) {
+                try {
+                    const texture = await new Promise((resolve, reject) => {
+                        loader.load(url, resolve, undefined, reject);
+                    });
+                    
+                    // Create a large sphere with the star map
+                    const starSphereRadius = 50000;
+                    const starGeometry = new THREE.SphereGeometry(starSphereRadius, 64, 32);
+                    const starMaterial = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        side: THREE.BackSide,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    
+                    const starSphere = new THREE.Mesh(starGeometry, starMaterial);
+                    
+                    // Clear procedural stars and add star map
+                    starsGroup.clear();
+                    starsGroup.add(starSphere);
+                    
+                    document.getElementById('star-count').textContent = 'NASA Star Map';
+                    console.log('Star map loaded from:', url);
+                    break;
+                } catch (e) {
+                    console.log('Failed to load star map from:', url);
+                }
+            }
+        }
+
+        // Setup toggle buttons
+        function setupToggleButtons() {
+            const toggleInfo = document.getElementById('toggle-info');
+            const toggleControls = document.getElementById('toggle-controls');
+            const toggleFilters = document.getElementById('toggle-filters');
+            
+            const infoPanel = document.getElementById('info');
+            const controlsPanel = document.getElementById('controls');
+            const filtersPanel = document.getElementById('filters');
+            
+            toggleInfo.addEventListener('click', () => {
+                infoPanel.classList.toggle('hidden');
+                toggleInfo.classList.toggle('hidden-panel', infoPanel.classList.contains('hidden'));
+            });
+            
+            toggleControls.addEventListener('click', () => {
+                controlsPanel.classList.toggle('hidden');
+                toggleControls.classList.toggle('hidden-panel', controlsPanel.classList.contains('hidden'));
+            });
+            
+            toggleFilters.addEventListener('click', () => {
+                filtersPanel.classList.toggle('hidden');
+                toggleFilters.classList.toggle('hidden-panel', filtersPanel.classList.contains('hidden'));
+            });
+            
+            document.addEventListener('keydown', (event) => {
+                switch(event.key.toLowerCase()) {
+                    case 'i':
+                        toggleInfo.click();
+                        break;
+                    case 'c':
+                        toggleControls.click();
+                        break;
+                    case 's':
+                        toggleFilters.click();
+                        break;
+                    case 'h':
+                        infoPanel.classList.add('hidden');
+                        controlsPanel.classList.add('hidden');
+                        filtersPanel.classList.add('hidden');
+                        toggleInfo.classList.add('hidden-panel');
+                        toggleControls.classList.add('hidden-panel');
+                        toggleFilters.classList.add('hidden-panel');
+                        break;
+                    case 'escape':
+                        infoPanel.classList.remove('hidden');
+                        controlsPanel.classList.remove('hidden');
+                        filtersPanel.classList.remove('hidden');
+                        toggleInfo.classList.remove('hidden-panel');
+                        toggleControls.classList.remove('hidden-panel');
+                        toggleFilters.classList.remove('hidden-panel');
+                        break;
+                }
+            });
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            if (earthGroup.children.length > 0) {
+                earthGroup.rotation.y += 0.002;
+                // Rotate clouds slightly slower for a more realistic effect
+                if (earthGroup.children.length > 1) {
+                    earthGroup.children[1].rotation.y += 0.001;
+                }
+            }
+            
+            if (window.debrisOrbits) {
+                window.debrisOrbits.forEach(orbit => {
+                    orbit.phase += orbit.speed;
+                    
+                    const x = orbit.radius * Math.cos(orbit.phase) * Math.cos(orbit.inclination);
+                    const y = orbit.radius * Math.sin(orbit.phase);
+                    const z = orbit.radius * Math.cos(orbit.phase) * Math.sin(orbit.inclination);
+                    
+                    orbit.mesh.position.set(x, y, z);
+                });
+            }
+            
+            starsGroup.children.forEach(star => {
+                if (star.userData && star.userData.twinkleSpeed) {
+                    if (Math.random() < 0.01) {
+                        const twinkle = Math.sin(time * star.userData.twinkleSpeed) * 0.2 + 0.8;
+                        star.material.opacity = star.userData.originalOpacity * twinkle;
+                    }
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize everything
+        async function init() {
+            try {
+                document.getElementById('loading').textContent = 'Creating Earth...';
+                await createEarth();
+                
+                document.getElementById('loading').textContent = 'Generating satellites...';
+                await createDebris();
+                
+                document.getElementById('loading').textContent = 'Creating stars...';
+                await createStars();
+                
+                setupToggleButtons();
+                
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('info').classList.remove('hidden');
+                document.getElementById('toggle-info').classList.remove('hidden-panel');
+                
+                animate();
+                
+                console.log('Visualization complete!');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                document.getElementById('loading').textContent = 'Error loading visualization: ' + error.message;
+            }
+        }
+
+        // Start the application
+        init();
+    </script>
+</body>
+</html>
